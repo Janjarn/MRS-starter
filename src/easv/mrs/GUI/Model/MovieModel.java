@@ -30,4 +30,12 @@ public class MovieModel {
         moviesToBeViewed.clear();
         moviesToBeViewed.addAll(searchResults);
     }
+
+    public void createNewMovie(String title, int year) throws Exception {
+        // Create movie in data storage
+        Movie m = movieManager.createNewMovie(title, year);
+
+        // Add movie to observable list (gui)
+        moviesToBeViewed.add(m);
+    }
 }

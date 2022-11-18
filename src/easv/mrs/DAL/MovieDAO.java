@@ -6,7 +6,10 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+
+import static java.nio.file.StandardOpenOption.APPEND;
 
 public class MovieDAO implements IMovieDataAccess {
 
@@ -15,32 +18,48 @@ public class MovieDAO implements IMovieDataAccess {
 
     public List<Movie> getAllMovies() throws IOException {
 
-        // Read all files from line
-        List<String> lines = Files.readAllLines(pathToFile);
-        List<Movie> movies = new ArrayList<>();
+        try {
 
-        // Parse each line
-        for (String line: lines) {
-            String[] separatedLine = line.split(",");
+            // Read all files from line
+            List<String> lines = Files.readAllLines(pathToFile);
+            List<Movie> movies = new ArrayList<>();
 
-            // Map each separated to Movie object
-            int id = Integer.parseInt(separatedLine[0]);
-            int year = Integer.parseInt(separatedLine[1]);
-            String title = separatedLine[2];
+            // Parse each line
+            for (String line : lines) {
+                String[] separatedLine = line.split(",");
 
-            // Creat Movie object
-            Movie newMovie = new Movie(id, year, title);
-            movies.add(newMovie);
+                // Map each separated to Movie object
+                int id = Integer.parseInt(separatedLine[0]);
+                int year = Integer.parseInt(separatedLine[1]);
+                String title = separatedLine[2];
 
-            //System.out.println(separatedLine);
+                // Creat Movie object
+                Movie newMovie = new Movie(id, year, title);
+                movies.add(newMovie);
+
+                //System.out.println(separatedLine);
+            }
+            movies.sort(Comparator.comparingInt(Movie::getId));
+
+            return movies;
         }
-
-        return movies;
+        catch (IOException e) {
+            System.out.println("Log to the db");
+            throw e;
+        }
     }
 
     @Override
     public Movie createMovie(String title, int year) throws Exception {
-        return null;
+
+        int nextId = getNextId();
+
+        String newLine = nextId + "," + year + "," + title;
+
+        // Append new line using Java NIO
+        Files.write(pathToFile, ("\r\n" + newLine).getBytes(), APPEND);
+
+        return new Movie(nextId, year, title);
     }
 
     @Override
@@ -53,7 +72,12 @@ public class MovieDAO implements IMovieDataAccess {
 
     }
 
+    private int getNextId() throws IOException {
+        List<Movie> movies = getAllMovies();
 
+        Movie lastMovie = movies.get(movies.size()- 1);
+        return lastMovie.getId() + 1;
+    }
 
 
 
