@@ -5,7 +5,10 @@ import easv.mrs.BE.Movie;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -16,11 +19,15 @@ public class MovieDAO implements IMovieDataAccess {
     private static final String MOVIES_FILE = "data/movie_titles.txt";
     private Path pathToFile = Path.of(MOVIES_FILE);
 
+    /**
+     * Retrieve all movies from the data source
+     * @return
+     * @throws IOException
+     */
     public List<Movie> getAllMovies() throws IOException {
 
         try {
-
-            // Read all files from line
+            // Read all lines from file
             List<String> lines = Files.readAllLines(pathToFile);
             List<Movie> movies = new ArrayList<>();
 
@@ -28,12 +35,12 @@ public class MovieDAO implements IMovieDataAccess {
             for (String line : lines) {
                 String[] separatedLine = line.split(",");
 
-                // Map each separated to Movie object
+                // Map each separated line to Movie object
                 int id = Integer.parseInt(separatedLine[0]);
                 int year = Integer.parseInt(separatedLine[1]);
                 String title = separatedLine[2];
 
-                // Creat Movie object
+                // Create Movie object
                 Movie newMovie = new Movie(id, year, title);
                 movies.add(newMovie);
 
@@ -44,34 +51,100 @@ public class MovieDAO implements IMovieDataAccess {
             return movies;
         }
         catch (IOException e) {
-            System.out.println("Log to the db");
+            // Log specifics about IOException and re-throw up the layers...
             throw e;
         }
     }
 
+    /**
+     * Create a new movie
+     * @param title
+     * @param year
+     * @return
+     * @throws Exception
+     */
     @Override
     public Movie createMovie(String title, int year) throws Exception {
 
         int nextId = getNextId();
-
         String newLine = nextId + "," + year + "," + title;
 
         // Append new line using Java NIO
-        Files.write(pathToFile, ("\r\n" + newLine).getBytes(), APPEND);
+        //Files.write(pathToFile, ("\r\n" + newLine).getBytes(), APPEND);
+
+        // Append new line using BufferedWriter
+        try (BufferedWriter bw = Files.newBufferedWriter(pathToFile, StandardOpenOption.SYNC, StandardOpenOption.APPEND, StandardOpenOption.WRITE)) {
+            bw.newLine();
+            bw.write(nextId + "," + year + "," + title);
+        }
 
         return new Movie(nextId, year, title);
     }
 
+    /**
+     * Update a movie with param movie
+     * @param movie
+     * @throws Exception
+     */
     @Override
     public void updateMovie(Movie movie) throws Exception {
+        try {
+            File tmp = new File(movie.hashCode() + ".txt"); //Creates a temp file for writing to.
+            List<Movie> allMovies = getAllMovies();
+            allMovies.removeIf((Movie t) -> t.getId() == movie.getId());
+            allMovies.add(movie);
 
+            //I'll sort the movies by their ID's
+            allMovies.sort(Comparator.comparingInt(Movie::getId));
+
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(tmp))) {
+                for (Movie mov : allMovies) {
+                    bw.write(mov.getId() + "," + mov.getYear() + "," + mov.getTitle());
+                    bw.newLine();
+                }
+            }
+
+            //Overwrite the movie file with the tmp one.
+            Files.copy(tmp.toPath(), new File(MOVIES_FILE).toPath(), StandardCopyOption.REPLACE_EXISTING);
+            //Clean up after the operation is done (Remove tmp)
+            Files.delete(tmp.toPath());
+
+        } catch (IOException ex) {
+            throw new Exception("Could not update movie.", ex);
+        }
     }
 
+    /**
+     * Delete a movie from the collection
+     * @param movie
+     * @throws Exception
+     */
     @Override
     public void deleteMovie(Movie movie) throws Exception {
-
+        try {
+            File file = new File(MOVIES_FILE);
+            if (!file.canWrite()) {
+                throw new Exception("Can't write to movie storage");
+            }
+            List<Movie> movies = getAllMovies();
+            movies.remove(movie);
+            OutputStream os = Files.newOutputStream(file.toPath());
+            try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+                for (Movie mov : movies) {
+                    String line = mov.getId() + "," + mov.getYear() + "," + mov.getTitle();
+                    bw.write(line);
+                    bw.newLine();
+                }
+            }
+        } catch (IOException ex) {
+            throw new Exception("Could not delete movie.", ex);
+        }
     }
 
+    /**
+     * Get the next ID in our collection
+     * @return
+     */
     private int getNextId() throws IOException {
         List<Movie> movies = getAllMovies();
 
