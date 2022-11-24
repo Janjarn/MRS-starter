@@ -1,20 +1,27 @@
 package easv.mrs.DAL.db;
 
 
+import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
+import com.microsoft.sqlserver.jdbc.SQLServerException;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+
 public class MyDatabaseConnector {
 
 
     //Class will easv.mrs.be included when we start working on DATABASES
-    /*
+
     private SQLServerDataSource dataSource;
 
     public MyDatabaseConnector()
     {
         dataSource = new SQLServerDataSource();
         dataSource.setServerName("10.176.111.31");
-        dataSource.setDatabaseName("NetflixRecommendationSystem");
-        dataSource.setUser("CSe20A_40");
-        dataSource.setPassword("CSe20A_40");
+        dataSource.setDatabaseName("MG_MRS_2022");
+        dataSource.setUser("CSe22A_29");
+        dataSource.setPassword("CSe22A_29");
+        dataSource.setTrustServerCertificate(true);
         dataSource.setPortNumber(1433);
     }
 
@@ -33,6 +40,6 @@ public class MyDatabaseConnector {
 
         } //Connection gets closed here
     }
-    */
+
 
 }
